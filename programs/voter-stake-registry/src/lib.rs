@@ -13,6 +13,18 @@ pub mod state;
 #[macro_use]
 extern crate static_assertions;
 
+/// solana-security-txt for Voter Stake Registry deployed for Marinade.finance SPL Governance purposes
+use solana_security_txt::security_txt;
+security_txt! {
+    name: "Voter Stake Registry / SPL Governance plugin",
+    project_url: "https://github.com/marinade-finance/voter-stake-registry",
+    contacts: "link:https://docs.marinade.finance/marinade-dao,link:https://discord.com/invite/6EtUf4Euu6",
+    policy: "https://docs.marinade.finance/marinade-protocol/security",
+    preferred_languages: "en",
+    source_code: "https://github.com/marinade-finance/voter-stake-registry",
+    auditors: "none"
+}
+
 // The program address.
 declare_id!("VoteMBhDCqGLRgYpp9o7DGyq81KNmwjXQRAHStjtJsS");
 
