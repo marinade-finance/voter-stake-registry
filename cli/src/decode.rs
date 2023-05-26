@@ -1,4 +1,4 @@
-use anchor_lang::Discriminator;
+use anchor_lang::{Discriminator};
 use anyhow::{anyhow, bail, Result};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -32,8 +32,8 @@ struct DisplayVoter {
 }
 
 /// Decode a Voter account and print its JSON to stdout
-fn decode_voter(data: &[u8]) -> Result<()> {
-    let mut data = data;
+fn decode_voter(data_voter: &[u8], data_registrar: &[u8]) -> Result<()> {
+    let mut data = data_voter;
     let voter: Voter = anchor_lang::AccountDeserialize::try_deserialize(&mut data)?;
     let now_ts = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?
@@ -59,7 +59,13 @@ fn decode_voter(data: &[u8]) -> Result<()> {
             })
             .collect(),
     };
+
+    let mut data = data_registrar;
+    let registrar: Registrar = anchor_lang::AccountDeserialize::try_deserialize(&mut data)?;
+    let voter_weight = voter.weight(&registrar);
+
     println!("{}", serde_json::to_string(&ser)?);
+    println!("weight: {}", voter_weight?);
     Ok(())
 }
 
@@ -68,18 +74,42 @@ fn decode_voter(data: &[u8]) -> Result<()> {
 pub fn decode_account() -> Result<()> {
     let account_types = HashMap::from([(Voter::discriminator(), &decode_voter)]);
 
-    for line in io::stdin().lock().lines() {
-        let data = base64::decode(line?)?;
+    let mut lines = io::stdin().lock().lines();
+    let mut line_voter: Option<String> = None;
+    let mut line_registrar: Option<String> = None;
 
-        if data.len() < 8 {
-            bail!("data length {} too small for discriminator", data.len());
+    while let Some(line) = lines.next() {
+        let line_trimmed = line?.trim().to_string();
+        if line_trimmed.starts_with("#") {
+            continue
         }
-        let discr = &data[0..8];
-        let handler = account_types
-            .get(discr)
-            .ok_or_else(|| anyhow!("discriminator {:?} not recognized", discr))?;
+        if line_voter.is_none() {
+            line_voter = Some(line_trimmed);
+            continue
+        } else if line_registrar.is_none()  {
+            line_registrar = Some(line_trimmed);
+        }
 
-        handler(&data)?;
+        let data_voter = base64::decode(line_voter.unwrap())?;
+        let data_registrar = base64::decode(line_registrar.unwrap())?;
+
+        if data_voter.len() < 8 || data_registrar.len() < 8 {
+            bail!("data length {}/{} too small for discriminator", data_voter.len(), data_registrar.len());
+        }
+        let discr_voter = &data_voter[0..8];
+        let handler = account_types
+            .get(discr_voter)
+            .ok_or_else(|| anyhow!("discriminator {:?} not recognized", discr_voter))?;
+        let discr_registar = &data_registrar[0..8];
+        if Registrar::discriminator() != discr_registar {
+            bail!("discriminator registar {:?} not recognized", discr_registar);
+        }
+
+        handler(&data_voter, &data_registrar)?;
+
+        line_voter = None;
+        line_registrar = None;
     }
+
     Ok(())
 }

@@ -1,3 +1,5 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+use std::convert::{TryFrom};
 use crate::error::*;
 use crate::state::voting_mint_config::VotingMintConfig;
 use anchor_lang::prelude::*;
@@ -28,11 +30,19 @@ const_assert!(std::mem::size_of::<Registrar>() % 8 == 0);
 
 impl Registrar {
     pub fn clock_unix_timestamp(&self) -> i64 {
-        Clock::get()
+        // Clock::get()
+        //     .unwrap()
+        //     .unix_timestamp
+        //     .checked_add(self.time_offset)
+        //     .unwrap()
+        return self.get_epoch_ms();
+    }
+
+    fn get_epoch_ms(&self) -> i64 {
+        return i64::try_from(SystemTime::now()
+            .duration_since(UNIX_EPOCH)
             .unwrap()
-            .unix_timestamp
-            .checked_add(self.time_offset)
-            .unwrap()
+            .as_millis()).unwrap();
     }
 
     pub fn voting_mint_config_index(&self, mint: Pubkey) -> Result<usize> {
