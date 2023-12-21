@@ -1,4 +1,3 @@
-use crate::error::*;
 use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::sysvar::instructions as tx_instructions;
@@ -54,20 +53,6 @@ pub fn create_voter(
     voter_bump: u8,
     voter_weight_record_bump: u8,
 ) -> Result<()> {
-    // Forbid creating voter accounts from CPI. The goal is to make automation
-    // impossible that weakens some of the limitations intentionally imposed on
-    // locked tokens.
-    {
-        let ixns = ctx.accounts.instructions.to_account_info();
-        let current_index = tx_instructions::load_current_index_checked(&ixns)? as usize;
-        let current_ixn = tx_instructions::load_instruction_at_checked(current_index, &ixns)?;
-        require_keys_eq!(
-            current_ixn.program_id,
-            *ctx.program_id,
-            VsrError::ForbiddenCpi
-        );
-    }
-
     require_eq!(voter_bump, *ctx.bumps.get("voter").unwrap());
     require_eq!(
         voter_weight_record_bump,
